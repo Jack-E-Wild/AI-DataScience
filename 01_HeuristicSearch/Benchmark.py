@@ -3,10 +3,16 @@ import csv
 import random
 import time
 import statistics
+import os
 from datetime import datetime
+
 from EightPuzzle import EightPuzzle
 from StarSearch import StarSearch
 from StarSearchGlobal import StarSearchGlobal
+
+# Creates BenchmarkResults directory if it does not exist
+def ensure_results_directory():
+        os.makedirs("BenchmarkResults", exist_ok=True)
 
 #generates a list of 100 solvable puzzles without duplicates
 def generate_random_puzzles(amount=100):
@@ -85,6 +91,8 @@ def benchmark_puzzle(puzzle, puzzle_id, search_class, version):
     return results
 
 def save_raw_results(results):
+    ensure_results_directory()
+
     # Create a timestamp for the filename
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -149,19 +157,35 @@ def calculate_summary(results):
             result["expanded_nodes"] for result in selected_results
         ]
 
-        # Calculate averages and standard deviations
+        # Skip combinations without any results
+        if not selected_results:
+            continue
+
+        # Calculate averages
+        average_runtime = statistics.mean(runtimes)
+        average_expanded_nodes = statistics.mean(expanded_nodes)
+
+        # Calculate standard deviations if at least two measurements exist
+        if len(runtimes) >= 2:
+            std_runtime = statistics.stdev(runtimes)
+            std_expanded_nodes = statistics.stdev(expanded_nodes)
+        else:
+            std_runtime = 0
+            std_expanded_nodes = 0
+
         summary.append({
             "version": version,
             "heuristic": heuristic,
-            "average_runtime_s": f"{statistics.mean(runtimes):.4f}",
-            "std_runtime_s": f"{statistics.stdev(runtimes):.4f}",
-            "average_expanded_nodes": f"{statistics.mean(expanded_nodes):.2f}",
-            "std_expanded_nodes": f"{statistics.stdev(expanded_nodes):.2f}"
+            "average_runtime_s": f"{average_runtime:.4f}",
+            "std_runtime_s": f"{std_runtime:.4f}",
+            "average_expanded_nodes": f"{average_expanded_nodes:.2f}",
+            "std_expanded_nodes": f"{std_expanded_nodes:.2f}"
         })
 
     return summary
 
 def save_summary(summary):
+    ensure_results_directory()
     # Create a timestamp for the filename
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -189,20 +213,123 @@ def save_summary(summary):
 
     print("Summary saved to", filename)
 
+# Print the current puzzle state
+def print_puzzle(puzzle):
 
-if __name__ == "__main__":
+    for row in puzzle.current_state:
+        print("+---+---+---+")
+        print("|", end="")
 
-    # Generate three solvable puzzles
-    puzzles = generate_random_puzzles(2)
+        for number in row:
+            if number == 0:
+                print("   |", end="")
+            else:
+                print(f" {number} |", end="")
 
+        print()
+
+    print("+---+---+---+")
+
+
+#TESTING
+def run_randomize_test(amount, iterations):
+    # Store all benchmark results
     all_results = []
 
-    # Test each puzzle with both search algorithms
-    for index, puzzle in enumerate(puzzles, start=1):
+    # Generate and benchmark the requested number of puzzles
+    for index in range(1, amount + 1):
+        print("================================")
+        print("Puzzle", index, "of", amount)
+        print("================================")
 
+        # Create a new puzzle
+        puzzle = EightPuzzle()
+
+        # Randomize the puzzle using the requested number of iterations
+        puzzle.randomize_current_state(iterations)
+
+        # Display the puzzle before benchmarking
+        print("Puzzle state:")
+        print_puzzle(puzzle)
+
+
+        # Run the benchmark using StarSearch
+        results = benchmark_puzzle(
+            puzzle,
+            index,
+            StarSearch,
+            "Original"
+        )
+
+        all_results.extend(results)
+
+    # Save raw results
+    save_raw_results(all_results)
+
+    # Calculate and save summary
+    summary = calculate_summary(all_results)
+    save_summary(summary)
+
+    print("Benchmark completed!")
+    print("Total measurements:", len(all_results))
+
+
+
+
+def run_random_puzzles_test(amount):
+    # Store all benchmark results
+    all_results = []
+
+    # Generate the requested number of random puzzles
+    puzzles = generate_random_puzzles(amount)
+
+    # Benchmark each generated puzzle
+    for index, puzzle in enumerate(puzzles, start=1):
+        print("================================")
+        print("Puzzle", index, "of", amount)
+        print("================================")
+
+        # Display the puzzle before benchmarking
+        print("Puzzle state:")
+        print_puzzle(puzzle)
+
+        # Run the benchmark using StarSearch
+        results = benchmark_puzzle(
+            puzzle,
+            index,
+            StarSearch,
+            "Original"
+        )
+
+        all_results.extend(results)
+
+    # Save raw results
+    save_raw_results(all_results)
+
+    # Calculate and save summary
+    summary = calculate_summary(all_results)
+    save_summary(summary)
+
+    print("Benchmark completed!")
+    print("Total measurements:", len(all_results))
+
+
+def run_comparison_test():
+    # Store all benchmark results
+    all_results = []
+
+    # Generate five random puzzles
+    puzzles = generate_random_puzzles(5)
+
+    # Benchmark each puzzle
+    for index, puzzle in enumerate(puzzles, start=1):
         print("================================")
         print("Puzzle", index, "of", len(puzzles))
         print("================================")
+
+        # Display the puzzle before benchmarking
+        print("Puzzle state:")
+        print_puzzle(puzzle)
 
         # Run the original search algorithm
         original_results = benchmark_puzzle(
@@ -211,7 +338,6 @@ if __name__ == "__main__":
             StarSearch,
             "Original"
         )
-
         all_results.extend(original_results)
 
         # Run the global search algorithm
@@ -221,15 +347,14 @@ if __name__ == "__main__":
             StarSearchGlobal,
             "Global"
         )
-
         all_results.extend(global_results)
 
-    # Save all benchmark results
+    # Save raw results
     save_raw_results(all_results)
-    # Calculate and save summary results
+
+    # Calculate and save summary
     summary = calculate_summary(all_results)
     save_summary(summary)
-
 
     print("Benchmark completed!")
     print("Total measurements:", len(all_results))
