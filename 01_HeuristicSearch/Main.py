@@ -4,6 +4,13 @@ from Benchmark import (
     run_comparison_test
 )
 
+"""
+This module provides the main entry point of the application.
+
+It displays a menu that allows the user to select and configure
+different benchmark scenarios. The selected test is then executed
+using the corresponding functions from the Benchmark module.
+"""
 
 def main():
     print("================================")

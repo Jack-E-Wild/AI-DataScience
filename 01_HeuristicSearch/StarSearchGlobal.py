@@ -4,6 +4,13 @@ from EightPuzzle import EightPuzzle
 
 
 class StarSearchGlobal:
+    """
+    Implements a different version of the A* search algorithm.
+
+    In addition to the open and expanded node lists, this implementation
+    maintains a dictionary of previously expanded puzzle states.
+    """
+
     def __init__(self, puzzle_to_solve: EightPuzzle):
         self.initial_puzzle = copy.deepcopy(puzzle_to_solve)
         self.expanded_nodes = []
@@ -13,6 +20,13 @@ class StarSearchGlobal:
         self.solved = False
 
     def get_state_key(self, puzzle):
+        """
+        Converts a two-dimensional puzzle state into a flat tuple.
+
+        :param puzzle: Puzzle instance whose state is converted.
+
+        :return tuple: Flattened representation of the puzzle state.
+        """
         # Convert puzzle array into a flat tuple
         return tuple(
             number
